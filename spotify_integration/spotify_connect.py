@@ -110,9 +110,9 @@ def get_refresh_token():
         print(f"Failed to refresh access token: {response.json()}")
         return None
     
-@app.route('/play')
+@app.route('/play', methods=['POST', 'GET'])
 def play():
-    # TODO: Make track random from a large gaming playlist
+    target_bpm = request.json.get("bpm")
     track_uri = get_song_from_playlist(target_bpm=target_bpm, 
                                       seed_genres=seed_genres)
     print(track_uri)
@@ -214,4 +214,4 @@ def play_song_on_spotify(recommendation):
 '''
         
 if __name__ == "__main__":
-    # app.run(debug=True, port=8080)
+    app.run(debug=True, port=8080)

@@ -12,6 +12,8 @@ from math import atan, atan2, pi, degrees, sqrt
 from numpy import concatenate
 from scipy.spatial import distance as dist
 
+import requests
+
 DEFAULT_LANDMARKS_STYLE = mp.solutions.drawing_styles.get_default_pose_landmarks_style()
 
 # Optionally record the video feed to a timestamped AVI in the current directory
@@ -35,6 +37,8 @@ JUMP_THRESHOLD = .0001
 # R side: 90 top to 0 right to -90 bottom
 # L side: 90 top to 180 left to 269... -> -90 bottom
 semaphores = {}
+bpm = 0
+URL = 'http://localhost:8080/play'
 
 LEG_EXTEND_ANGLE = 18 # degrees from vertical standing; should be divisor of 90
 leg_extension_angles = {
@@ -312,8 +316,18 @@ def process_poses(image, pose_models, draw_landmarks, flip, display_only):
 
   return image
 
+def send_bpm_to_server(bpm):
+  data = {'bpm': bpm}
+
+  try:
+    response = requests.post(URL, json=data)
+    response.raise_for_status()
+    print("Response:", response.text)
+  except Exception as e:
+      print("An error occurred:", e)
+
 def main():
-  global last_frames, last_keys, frame_midpoint
+  global last_frames, last_keys, frame_midpoint, bpm
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--map', '-m', help='File to import for mapped keys')
@@ -358,6 +372,7 @@ def main():
     start_time = time.time()
     speeds = []
 
+    counter = 0
     while cap.isOpened():
       success, image = cap.read()
       if not success: break
@@ -385,7 +400,18 @@ def main():
           if 15 < time_elapsed < 15.078:
               # Calculate and print average speed
               average_speed = sum(speeds) / len(speeds)
-              print("Average Speed after 15 seconds:", average_speed)  
+              print("Average Speed after 15 seconds:", average_speed)
+              counter += 1
+              
+              if counter == 1:
+                bpm = average_speed
+                # Include cap for bpms
+                if bpm < 80:
+                  bpm = 70
+                elif bpm > 130:
+                  bpm = 130
+                print("Mapped BPM", bpm)
+                send_bpm_to_server(bpm) 
 
       if render_and_maybe_exit(image, recording):
         break
