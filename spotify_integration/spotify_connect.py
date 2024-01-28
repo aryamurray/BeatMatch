@@ -26,6 +26,17 @@ PLAYLIST_ID = '6vI3xbpdPYYJmicjBieLcr'
 USER_ID = "fymu9mxzqx04jp8igm1s6781d"
 new_playlist_id = 0
 
+# Playlist names
+bpm_75_to_90 = ["Mellow", "Soulful", "Heartfelt", "Breezy", "Groovy", 
+                "Laid-back", "Reflective", "Smooth", "Uplifting"]
+bpm_90_to_105 = ["Energetic", "Cheerful", "Bouncy", "Catchy", "Warm", "Dynamic", "Sunny"]
+bpm_105_to_120 = ["Funky", "Pulsating", "Driving", "Lively", "Empowering",
+                  "Radiant", "Infectious", "Anthemic"]
+bpm_120_to_135 = ["Exhilarating", "Intense", "Electrifying", "Club-ready", 
+                  "Pumping", "Rousing", "Thumping", "Fiery"]
+playlist_synonyms = ["Tunes", "Vibes", "Tracks", "Grooves", "Bangers", "Cuts",
+                     "Selections", "Sessions", "Hits"]
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -120,7 +131,7 @@ def play():
     matched_tracks, track_uri = get_song_from_playlist(target_bpm=target_bpm, 
                                       seed_genres=seed_genres)
     print(track_uri)
-    create_playlist()
+    create_playlist(target_bpm)
     add_song_to_playlist(matched_tracks)
     return track_uri
 
@@ -162,7 +173,7 @@ def get_song_from_playlist(target_bpm, seed_genres):
         
     return matched_tracks, matched_tracks[chosen_track_number]['track']['uri']
 
-def create_playlist():
+def create_playlist(target_bpm):
     # ABOUT: Create a playlist on Spotify
     global access_token_expires_in, access_token_issued_at, access_token, new_playlist_id
     playlist_url = f"https://api.spotify.com/v1/users/{USER_ID}/playlists"
@@ -176,7 +187,27 @@ def create_playlist():
     print("Access token: ", access_token)
     headers = {'Authorization': f'Bearer {access_token}', 
                'Content-Type': 'application/json'}
-    params = {'name': 'BPM Playlist', 'description': 'Playlist for BPM'}
+    
+    # Choose a playlist name and subtitle
+    playlist_name = ""
+    playlist_subtitle = ""
+
+    if target_bpm <= 90:
+        playlist_name = random.choice(bpm_75_to_90) + " " + random.choice(playlist_synonyms)
+        playlist_subtitle = f"For when you're feeling {random.choice(bpm_75_to_90).lower()}, BPM 75 to 90"
+    elif target_bpm <= 105:
+        playlist_name = random.choice(bpm_90_to_105) + " " + random.choice(playlist_synonyms)
+        playlist_subtitle = f"For when you're feeling {random.choice(bpm_90_to_105).lower()}, BPM 90 to 105"
+    elif target_bpm <= 120:
+        playlist_name = random.choice(bpm_105_to_120) + " " + random.choice(playlist_synonyms)
+        playlist_subtitle = f"For when you're looking for {random.choice(bpm_105_to_120).lower()} beats, BPM 105 to 120"
+    elif target_bpm <= 135:
+        playlist_name = random.choice(bpm_120_to_135) + " " + random.choice(playlist_synonyms)
+        playlist_subtitle = f"For when you're looking for {random.choice(bpm_120_to_135).lower()} beats, BPM 120 to 135"
+
+    print("Playlist name: ", playlist_name)
+    print("Playlist subtitle: ", playlist_subtitle)
+    params = {'name': f'{playlist_name}', 'description': f'{playlist_subtitle}'}
     
     # Make the request
     response = requests.post(playlist_url, headers=headers, json=params)
