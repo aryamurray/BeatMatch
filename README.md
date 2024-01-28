@@ -1,6 +1,15 @@
-# Semaphore Games
+# BeatMatch
 
-### A full-body game controller
+### A full-body game controller that generates a soundtrack based on your game movements
+
+Credits to Semaphore Games for the action controller component of our 
+project. Our project is a forked repository of theirs (https://github.com/everythingishacked/Gamebody).
+
+## About the Beat Mapper
+Based on the speed of the user's movements during the game, we created a complex beats-per-minute (bpm) algorithm to generate a tempo. This tempo will be sent to Spotify, and a song
+will begin playing, matching the user's movements.
+
+## About the Action Controller
 
 [![demo](demo.gif)](https://youtu.be/Vi3Li3TkUVY)
 
