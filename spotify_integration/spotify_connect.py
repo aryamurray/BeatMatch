@@ -8,7 +8,8 @@ import spotipy
 CLIENT_ID = 'efe5dc5025aa447cadcd7fbeaab6550d'
 CLIENT_SECRET = 'a51c4dfa608c4f62924a81d285954ad3'
 REDIRECT_URI = 'http://localhost:8080/callback'
-SCOPE = 'user-modify-playback-state'
+SCOPE = "user-modify-playback-state playlist-modify-public "\
+    "playlist-modify-private user-read-email user-read-private"
 
 # Will set later on in the application
 access_token = 0
@@ -22,6 +23,8 @@ TEMPORARY_REDIRECT_CODE = 302
 target_bpm = 100
 seed_genres = 'pop'
 PLAYLIST_ID = '6vI3xbpdPYYJmicjBieLcr'
+USER_ID = "mangocat123"
+new_playlist_id = 0
 
 app = Flask(__name__)
 
@@ -112,10 +115,13 @@ def get_refresh_token():
     
 @app.route('/play', methods=['POST', 'GET'])
 def play():
+    get_current_user_profile()
     target_bpm = request.json.get("bpm")
-    track_uri = get_song_from_playlist(target_bpm=target_bpm, 
+    matched_tracks, track_uri = get_song_from_playlist(target_bpm=target_bpm, 
                                       seed_genres=seed_genres)
     print(track_uri)
+    create_playlist()
+    add_song_to_playlist(matched_tracks)
     return track_uri
 
 def get_song_from_playlist(target_bpm, seed_genres):
@@ -146,7 +152,7 @@ def get_song_from_playlist(target_bpm, seed_genres):
         if target_bpm - 15 <= tempo <= target_bpm + 15:
             matched_tracks.append(track)
         
-        if len(matched_tracks) == 5:
+        if len(matched_tracks) == 8:
             break
         
     print("Matched tracks: ", len(matched_tracks))
@@ -154,7 +160,75 @@ def get_song_from_playlist(target_bpm, seed_genres):
     chosen_track_number = random.randint(0, len(matched_tracks) - 1)
     sp.start_playback(uris=[matched_tracks[chosen_track_number]['track']['uri']])
         
-    return matched_tracks[chosen_track_number]['track']['uri']
+    return matched_tracks, matched_tracks[chosen_track_number]['track']['uri']
+
+def create_playlist():
+    # ABOUT: Create a playlist on Spotify
+    global access_token_expires_in, access_token_issued_at, access_token, new_playlist_id
+    playlist_url = f"https://api.spotify.com/v1/users/{USER_ID}/playlists"
+    
+    # Check if the access token has expired
+    if (access_token == 0) or (access_token_issued_at == 0) or (time.time() > 
+                                            access_token_issued_at + 
+                                            access_token_expires_in):
+        access_token = get_refresh_token()
+
+    print("Access token: ", access_token)
+    headers = {'Authorization': f'Bearer {access_token}', 
+               'Content-Type': 'application/json'}
+    params = {'name': 'BPM Playlist', 'description': 'Playlist for BPM'}
+    
+    # Make the request
+    response = requests.post(playlist_url, headers=headers, json=params)
+    playlist = response.json()
+    new_playlist_id = playlist['id']
+    print(playlist)
+    print("Playlist created")
+    return playlist
+
+def get_current_user_profile():
+    # ABOUT: Get the current user's profile
+    global access_token_expires_in, access_token_issued_at, access_token
+    profile_url = "https://api.spotify.com/v1/me"
+    
+    # Check if the access token has expired
+    if (access_token == 0) or (access_token_issued_at == 0) or (time.time() > 
+                                            access_token_issued_at + 
+                                            access_token_expires_in):
+        access_token = get_refresh_token()
+
+    print("Access token: ", access_token)
+    headers = {'Authorization': f'Bearer {access_token}', 
+               'Content-Type': 'application/json'}
+    
+    # Make the request
+    response = requests.get(profile_url, headers=headers)
+    profile = response.json()['id']
+    print(profile)
+    return profile
+
+def add_song_to_playlist(matched_tracks):
+    # ABOUT: Add a song to the playlist
+    global access_token_expires_in, access_token_issued_at, access_token, new_playlist_id
+    add_song_url = f"https://api.spotify.com/v1/playlists/{new_playlist_id}/tracks"
+    
+    # Check if the access token has expired
+    if (access_token == 0) or (access_token_issued_at == 0) or (time.time() > 
+                                            access_token_issued_at + 
+                                            access_token_expires_in):
+        access_token = get_refresh_token()
+
+    print("Access token: ", access_token)
+    headers = {'Authorization': f'Bearer {access_token}', 
+               'Content-Type': 'application/json'}
+    uris = [track['track']['uri'] for track in matched_tracks]
+    params = {'uris': uris}
+    
+    # Make the request
+    response = requests.post(add_song_url, headers=headers, json=params)
+    print(response)
+    print("Songs added to playlist")
+    return response
 
 '''
 def get_song_from_spotify(target_bpm, seed_genres):
