@@ -5,9 +5,10 @@ import keyboard # local fork
 
 import mediapipe as mp
 import cv2
+import time
 
 from datetime import datetime
-from math import atan, atan2, pi, degrees
+from math import atan, atan2, pi, degrees, sqrt
 from numpy import concatenate
 from scipy.spatial import distance as dist
 
@@ -311,7 +312,6 @@ def process_poses(image, pose_models, draw_landmarks, flip, display_only):
 
   return image
 
-
 def main():
   global last_frames, last_keys, frame_midpoint
 
@@ -349,11 +349,43 @@ def main():
   with ExitStack() as stack:
     pose_models = SPLIT*[stack.enter_context(mp.solutions.pose.Pose())]
 
+    # Initialize MediaPipe Pose
+    mp_pose = mp.solutions.pose
+    pose = mp_pose.Pose()
+
+    # Initialize variables
+    prev_landmarks = None
+    start_time = time.time()
+    speeds = []
+
     while cap.isOpened():
       success, image = cap.read()
       if not success: break
 
       image = process_poses(image, pose_models, DRAW_LANDMARKS, FLIP, DISPLAY_ONLY)
+
+       # Process the frame
+      results = pose.process(image)
+      landmarks = results.pose_landmarks
+
+      if landmarks:
+          time_elapsed = 0
+          # Calculate speed
+          if prev_landmarks is not None:
+              distance = sqrt((landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].x - prev_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].x)**2 +
+                                  (landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].y - prev_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].y)**2)
+              time_elapsed = time.time() - start_time
+              speed = (40000 * distance / time_elapsed) + 40
+              speeds.append(speed)
+
+          # Update previous landmarks and time
+          prev_landmarks = landmarks
+
+          # Check if 15 seconds have elapsed
+          if 15 < time_elapsed < 15.078:
+              # Calculate and print average speed
+              average_speed = sum(speeds) / len(speeds)
+              print("Average Speed after 15 seconds:", average_speed)  
 
       if render_and_maybe_exit(image, recording):
         break
@@ -363,7 +395,6 @@ def main():
 
   cap.release()
   cv2.destroyAllWindows()
-
 
 if __name__ == '__main__':
     main()
