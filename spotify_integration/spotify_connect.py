@@ -1,6 +1,8 @@
 from flask import Flask, request, redirect
 import requests
+import time
 from urllib.parse import urlencode
+import random
 
 CLIENT_ID = 'efe5dc5025aa447cadcd7fbeaab6550d'
 CLIENT_SECRET = 'a51c4dfa608c4f62924a81d285954ad3'
@@ -8,15 +10,15 @@ REDIRECT_URI = 'http://localhost:8080/callback'
 SCOPE = 'user-modify-playback-state'
 
 # Will set later on in the application
-access_token = None
-refresh_token = None
-access_token_expires = 0
+access_token = 0
+access_token_issued_at = 0
+access_token_expires_in = 0
 
 # For redirect request
 TEMPORARY_REDIRECT_CODE = 302
 
 # TODO: Receive the bpm from mediapipe
-target_bpm = 120
+target_bpm = 60
 seed_genres = 'pop'
 
 app = Flask(__name__)
@@ -46,56 +48,92 @@ def callback():
     else:
         return 'Error retrieving authorization code. Please try again.'
 
-@app.route('/play')
-def play():
-    track_uri = get_song_from_spotify(target_bpm=target_bpm, 
-                                      seed_genres=seed_genres)
-    print(track_uri)
-    return track_uri
-    # play_song_on_spotify(track_uri)
-
-def get_access_token(refresh_token=None, code=None):
+def get_access_token(code):
     # ABOUT: Get the access token from Spotify
+    global access_token_expires_in
     token_url = 'https://accounts.spotify.com/api/token'
 
     # Use the code we got from the previous request to get an access token
-    # If there is no code, we're refreshing the token
-    if code:
-        payload = {
-            'grant_type': 'authorization_code',
-            'code': code,
-            'redirect_uri': REDIRECT_URI,
-            'client_id': CLIENT_ID,
-            'client_secret': CLIENT_SECRET
-        }
-    elif refresh_token:
-        payload = {
-            'grant_type': 'refresh_token',
-            'refresh_token': refresh_token,
-            'client_id': CLIENT_ID,
-            'client_secret': CLIENT_SECRET
-        }
+    data = {
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': REDIRECT_URI,
+        'client_id': CLIENT_ID,
+        'client_secret': CLIENT_SECRET
+    }
 
     # Make the request; code 200 is success
-    response = requests.post(token_url, data=payload)
+    response = requests.post(token_url, data=data)
     if response.status_code == 200:
+        # Save refresh token to file
         refresh_token = response.json()['refresh_token']
         with open('refresh_token.txt', 'w') as f:
             f.write(refresh_token)
             f.close()
+        
+        # Store how long it takes for access token to expire
+        access_token_expires_in = response.json()['expires_in']
+        
+        # Return access token
         return response.json()['access_token']
     else:
         print(f"Failed to get access token: {response.json()}")
         return None
+    
+def get_refresh_token():
+    global access_token_issued_at
+    refresh_token = None
+
+    # Get the refresh token from the file
+    try:
+        with open('refresh_token.txt', 'r') as f:
+            refresh_token = f.read()
+            f.close()
+    except FileNotFoundError:
+        print("Refresh token not found. Please authenticate again.")
+        return None
+    
+    data = {
+        'grant_type': 'refresh_token',
+        'refresh_token': refresh_token,
+        'client_id': CLIENT_ID,
+        'client_secret': CLIENT_SECRET
+    }
+
+    response = requests.post('https://accounts.spotify.com/api/token', data=data)
+    if response.status_code == 200:
+        access_token_issued_at = time.time()
+        return response.json()['access_token']
+    else:
+        print(f"Failed to refresh access token: {response.json()}")
+        return None
+    
+@app.route('/play')
+def play():
+    # TODO: Make track random from a large gaming playlist
+    track_uri = get_song_from_spotify(target_bpm=target_bpm, 
+                                      seed_genres=seed_genres)
+    print(track_uri)
+    play_song_on_spotify(track_uri)
+    return track_uri
 
 def get_song_from_spotify(target_bpm, seed_genres):
     # ABOUT: Get a song from Spotify based on the target_bpm and seed_genres
-    print("Access token: ", access_token)
+    global access_token_expires_in, access_token_issued_at, access_token
     recommendation_url = 'https://api.spotify.com/v1/recommendations'
+    
+    # Check if the access token has expired
+    if (access_token == 0) or (access_token_issued_at == 0) or (time.time() > 
+                                            access_token_issued_at + 
+                                            access_token_expires_in):
+        access_token = get_refresh_token()
+
+    print("Access token: ", access_token)
     headers = {'Authorization': f'Bearer {access_token}', 
                'Content-Type': 'application/json'}
-    params = {'target_tempo': target_bpm, 'seed_genres': seed_genres, 
-              'limit': 1}
+    params = {'target_tempo': target_bpm, 'min_tempo': (target_bpm - 10), 
+              'max_tempo': (target_bpm + 15), 'seed_genres': seed_genres, 
+              'limit': 10}
 
     # Make the request
     response = requests.get(recommendation_url, headers=headers, 
@@ -106,18 +144,30 @@ def get_song_from_spotify(target_bpm, seed_genres):
 
 def play_song_on_spotify(recommendation):
     # ABOUT: Play the song on Spotify
+    global access_token_expires_in, access_token_issued_at, access_token
     playback_url = "https://api.spotify.com/v1/me/player/play"
+    chosen_track_number = random.randint(0, len(recommendation['tracks']) - 1)
+    
+    # Check if the access token has expired
+    if (access_token == 0) or (access_token_issued_at == 0) or (time.time() > 
+                                            access_token_issued_at + 
+                                            access_token_expires_in):
+        access_token = get_refresh_token()
+
+    print("Access token: ", access_token)
+
     headers = {'Authorization': f'Bearer {access_token}', 
                'Content-Type': 'application/json'}
-    data = {'uris': recommendation['tracks'][0]['uri']}
+    data = {'uris': [recommendation['tracks'][0]['uri']]}
 
     # Make API request to start playback
     playback_response = requests.put(playback_url, headers=headers, json=data)
 
     if playback_response.status_code == 204:
-        print(f"Playback started successfully. Playing "
-              f"{recommendation['tracks'][0]['name']}, by" 
-              f"{recommendation['artists'][0]['name']}.")
+        print("Success!")
+        # print(f"Playback started successfully. Playing "
+        #       f"{recommendation['tracks'][0]['name']}, by" 
+        #       f"{recommendation['artists'][0]['name']}.")
     else:
         print("Error starting playback:", playback_response.json())
 
