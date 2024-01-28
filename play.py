@@ -397,7 +397,7 @@ def main():
           prev_landmarks = landmarks
 
           # Check if 15 seconds have elapsed
-          if 15 < time_elapsed < 15.078:
+          if (7.0 * (counter + 1)) < time_elapsed < (7.08 * (counter + 2)):
               # Calculate and print average speed
               average_speed = sum(speeds) / len(speeds)
               print("Average Speed after 15 seconds:", average_speed)
@@ -407,11 +407,14 @@ def main():
                 bpm = average_speed
                 # Include cap for bpms
                 if bpm < 80:
-                  bpm = 70
+                  bpm = 80
                 elif bpm > 130:
                   bpm = 130
                 print("Mapped BPM", bpm)
                 send_bpm_to_server(bpm) 
+              
+              if (average_speed < 90) and counter > 1:
+                break
 
       if render_and_maybe_exit(image, recording):
         break
