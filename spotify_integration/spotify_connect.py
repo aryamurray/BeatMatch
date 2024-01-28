@@ -3,6 +3,7 @@ import requests
 import time
 from urllib.parse import urlencode
 import random
+import spotipy
 
 CLIENT_ID = 'efe5dc5025aa447cadcd7fbeaab6550d'
 CLIENT_SECRET = 'a51c4dfa608c4f62924a81d285954ad3'
@@ -18,8 +19,9 @@ access_token_expires_in = 0
 TEMPORARY_REDIRECT_CODE = 302
 
 # TODO: Receive the bpm from mediapipe
-target_bpm = 60
+target_bpm = 100
 seed_genres = 'pop'
+PLAYLIST_ID = '6vI3xbpdPYYJmicjBieLcr'
 
 app = Flask(__name__)
 
@@ -111,16 +113,53 @@ def get_refresh_token():
 @app.route('/play')
 def play():
     # TODO: Make track random from a large gaming playlist
-    track_uri = get_song_from_spotify(target_bpm=target_bpm, 
+    track_uri = get_song_from_playlist(target_bpm=target_bpm, 
                                       seed_genres=seed_genres)
     print(track_uri)
-    play_song_on_spotify(track_uri)
     return track_uri
 
+def get_song_from_playlist(target_bpm, seed_genres):
+    # ABOUT: Get a song from Spotify based on the target_bpm and seed_genres
+    global access_token_expires_in, access_token_issued_at, access_token
+
+    # Check if the access token has expired
+    if (access_token == 0) or (access_token_issued_at == 0) or (time.time() > 
+                                            access_token_issued_at + 
+                                            access_token_expires_in):
+        access_token = get_refresh_token()
+
+    print("Access token: ", access_token)
+
+    # Initialize Spotify client
+    sp = spotipy.Spotify(auth=access_token)    
+
+    # Get tracks from playlist
+    tracks = sp.playlist_tracks(PLAYLIST_ID)['items']
+    matched_tracks = []
+
+    for track in tracks:
+        # Get the audio features for the track
+        audio_features = sp.audio_features(track['track']['id'])[0]
+        tempo = audio_features['tempo']
+
+        # If the tempo is within the target range, start playback
+        if target_bpm - 15 <= tempo <= target_bpm + 15:
+            matched_tracks.append(track)
+        
+        if len(matched_tracks) == 5:
+            break
+        
+    print("Matched tracks: ", len(matched_tracks))
+    # Choose a random track in matched_tracks to begin playback
+    chosen_track_number = random.randint(0, len(matched_tracks) - 1)
+    sp.start_playback(uris=[matched_tracks[chosen_track_number]['track']['uri']])
+        
+    return matched_tracks[chosen_track_number]['track']['uri']
+
+'''
 def get_song_from_spotify(target_bpm, seed_genres):
     # ABOUT: Get a song from Spotify based on the target_bpm and seed_genres
     global access_token_expires_in, access_token_issued_at, access_token
-    recommendation_url = 'https://api.spotify.com/v1/recommendations'
     
     # Check if the access token has expired
     if (access_token == 0) or (access_token_issued_at == 0) or (time.time() > 
@@ -141,7 +180,9 @@ def get_song_from_spotify(target_bpm, seed_genres):
     recommendation = response.json()
     print(recommendation)
     return recommendation
+'''
 
+'''
 def play_song_on_spotify(recommendation):
     # ABOUT: Play the song on Spotify
     global access_token_expires_in, access_token_issued_at, access_token
@@ -170,6 +211,7 @@ def play_song_on_spotify(recommendation):
         #       f"{recommendation['artists'][0]['name']}.")
     else:
         print("Error starting playback:", playback_response.json())
-
+'''
+        
 if __name__ == "__main__":
     app.run(debug=True, port=8080)
