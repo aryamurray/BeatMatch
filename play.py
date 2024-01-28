@@ -13,6 +13,7 @@ from numpy import concatenate
 from scipy.spatial import distance as dist
 
 import requests
+from multiprocessing import Process
 
 DEFAULT_LANDMARKS_STYLE = mp.solutions.drawing_styles.get_default_pose_landmarks_style()
 
@@ -373,6 +374,7 @@ def main():
     speeds = []
 
     counter = 0
+    delay_time = 0 # start_time + 4
     while cap.isOpened():
       success, image = cap.read()
       if not success: break
@@ -383,14 +385,14 @@ def main():
       results = pose.process(image)
       landmarks = results.pose_landmarks
 
-      if landmarks:
+      if landmarks and (time.time() > delay_time):
           time_elapsed = 0
           # Calculate speed
           if prev_landmarks is not None:
               distance = sqrt((landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].x - prev_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].x)**2 +
                                   (landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].y - prev_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_SHOULDER].y)**2)
               time_elapsed = time.time() - start_time
-              speed = (40000 * distance / time_elapsed) + 40
+              speed = (40000 * distance / time_elapsed) + 35
               speeds.append(speed)
 
           # Update previous landmarks and time
@@ -403,7 +405,7 @@ def main():
               print("Average Speed after 15 seconds:", average_speed)
               counter += 1
               
-              if counter == 1:
+              if counter == 1 and (time.time() > delay_time):
                 bpm = average_speed
                 # Include cap for bpms
                 if bpm < 80:
@@ -411,9 +413,10 @@ def main():
                 elif bpm > 130:
                   bpm = 130
                 print("Mapped BPM", bpm)
-                send_bpm_to_server(bpm) 
+                process = Process(target=send_bpm_to_server, args=(bpm,))
+                process.start()
               
-              if (average_speed < 90) and counter > 1:
+              if (average_speed < 70) and counter > 9:
                 break
 
       if render_and_maybe_exit(image, recording):

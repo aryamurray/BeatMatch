@@ -5,8 +5,8 @@ from urllib.parse import urlencode
 import random
 import spotipy
 
-CLIENT_ID = 'efe5dc5025aa447cadcd7fbeaab6550d'
-CLIENT_SECRET = 'a51c4dfa608c4f62924a81d285954ad3'
+CLIENT_ID = 'd200c6ea9f1243368e7f7e1b96db6e47'
+CLIENT_SECRET = '7313f2b43fc74797bb9300459a0b02c2'
 REDIRECT_URI = 'http://localhost:8080/callback'
 SCOPE = "user-modify-playback-state playlist-modify-public "\
     "playlist-modify-private user-read-email user-read-private"
@@ -23,7 +23,7 @@ TEMPORARY_REDIRECT_CODE = 302
 target_bpm = 100
 seed_genres = 'pop'
 PLAYLIST_ID = '6vI3xbpdPYYJmicjBieLcr'
-USER_ID = "mangocat123"
+USER_ID = "fymu9mxzqx04jp8igm1s6781d"
 new_playlist_id = 0
 
 app = Flask(__name__)
