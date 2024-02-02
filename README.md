@@ -2,12 +2,89 @@
 
 ### A full-body game controller that generates a soundtrack based on your game movements
 
-Credits to Semaphore Games for the action controller component of our 
-project. Our project is a forked repository of theirs (https://github.com/everythingishacked/Gamebody).
+Our project for McHacks 11 is an innovative full-body game and music controller that dynamically syncs music to your movements. Whether you're using our game controller, working out, or just dancing around, our system adjusts the music in real-time to match the tempo of your movements, enhancing your experience with a personal touch.
 
-## About the Beat Mapper
-Based on the speed of the user's movements during the game, we created a complex beats-per-minute (bpm) algorithm to generate a tempo. This tempo will be sent to Spotify, and a song
-will begin playing, matching the user's movements.
+[![demo](demo.gif)](https://youtu.be/Vi3Li3TkUVY)
+
+Full demo at https://youtu.be/Vi3Li3TkUVY
+
+## Features
+
+- **Movement Detection**: Uses MediaPipe for computer vision to accurately track your movements.
+- **Music Synchronization**: Seamlessly syncs the rhythm of Spotify tracks to your movement tempo
+- **Dynamic Playlist Adjustment**: Automatically selects and plays songs from Spotify that match your current activity level, due to our smart algorithm.
+- **Playlist Generation**: Generates a playlist at the end of your session with synced songs
+- **Flask-Powered Backend**: A robust Python backend built with Flask to handle requests and integrate seamlessly with MediaPipe and Spotify's API.
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.x
+- Flask
+- MediaPipe
+- Spotipy (A lightweight Python library for the Spotify Web API)
+
+### Installation
+
+1. Clone the repository to your local machine:
+
+    ```bash
+    git clone <repository-url>
+    ```
+
+2. Navigate to the project directory:
+
+    ```bash
+    cd <project-name>
+    ```
+
+3. Install the required Python packages:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### Spotify API Setup
+
+To use this project, you'll need to set up a Spotify Developer account and create an application to obtain your `CLIENT_ID` and `CLIENT_SECRET`. Follow these steps:
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications) and log in with your Spotify account.
+2. Create a new application and note down the `CLIENT_ID` and `CLIENT_SECRET`.
+3. Set the `Redirect URI` in your Spotify application settings to `http://localhost:8080/callback`.
+
+Replace the `CLIENT_ID` and `CLIENT_SECRET` in `spotify_connect.py` with your actual credentials.
+
+### Running the Application
+
+1. Start the Flask server:
+
+    ```bash
+    python spotify_connect.py
+    ```
+
+2. Open another terminal and run the movement detection script:
+
+    ```bash
+    python play.py
+    ```
+
+3. Navigate to `http://localhost:8080` in your web browser and log in with your Spotify account to authorize the application.
+
+4. Navigate to the emulator with the game you want to play.
+
+5. Start moving! The system will detect your movements and adjust the music playback accordingly.
+
+## Contributing
+
+We welcome contributions! If you have suggestions for improvements or want to contribute to the project, please feel free to fork the repository and submit a pull request.
+
+## Acknowledgements
+
+- Credits to Semaphore Games for the action controller component of our 
+project. Our project is forked from [theirs](https://github.com/everythingishacked/Gamebody).
+
+---
 
 ## About the Action Controller
 
