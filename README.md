@@ -4,9 +4,9 @@
 
 Our project for McHacks 11 is an innovative full-body game and music controller that dynamically syncs music to your movements. Whether you're using our game controller, working out, or just dancing around, our system adjusts the music in real-time to match the tempo of your movements, enhancing your experience with a personal touch.
 
-[![demo](demo.gif)](https://youtu.be/Vi3Li3TkUVY)
+[![demo](Beatmatch-demo.gif)]([https://youtu.be/Vi3Li3TkUVY](https://youtu.be/cjJtSAo5xkk?si=8KP1Iat6J0vFYMIc))
 
-Full demo at https://youtu.be/Vi3Li3TkUVY
+Full demo [here](https://youtu.be/cjJtSAo5xkk?si=8KP1Iat6J0vFYMIc)
 
 ## Features
 
